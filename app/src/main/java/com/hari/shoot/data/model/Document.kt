@@ -7,5 +7,6 @@ data class Document(
     val uri: String,
     val title: String,
     val author: String,
-    val description: String
+    val description: String,
+    val uniqueKey: String = java.util.UUID.randomUUID().toString()
 ) 

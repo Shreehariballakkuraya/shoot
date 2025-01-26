@@ -13,6 +13,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.UUID
 
 @HiltViewModel
 class DocumentListViewModel @Inject constructor(
@@ -32,7 +33,7 @@ class DocumentListViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _documents.value = documentRepository.getAllDocuments()
+                _documents.value = documentRepository.getDocuments()
             } catch (e: Exception) {
                 android.util.Log.e("DocumentListViewModel", "Failed to load documents", e)
             } finally {
@@ -46,7 +47,7 @@ class DocumentListViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val document = Document(
-                    id = System.currentTimeMillis(),
+                    id = UUID.randomUUID().toString().hashCode().toLong(),
                     name = name,
                     date = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE),
                     uri = uri.toString(),
@@ -69,19 +70,9 @@ class DocumentListViewModel @Inject constructor(
             try {
                 documentRepository.deleteDocument(document)
                 _documents.value = _documents.value.filter { it.id != document.id }
+                loadDocuments() // Refresh the list
             } catch (e: Exception) {
                 android.util.Log.e("DocumentListViewModel", "Failed to delete document", e)
-            }
-        }
-    }
-
-    fun deleteAllDocuments() {
-        viewModelScope.launch {
-            try {
-                documentRepository.deleteAllDocuments()
-                _documents.value = emptyList()
-            } catch (e: Exception) {
-                android.util.Log.e("DocumentListViewModel", "Failed to delete all documents", e)
             }
         }
     }

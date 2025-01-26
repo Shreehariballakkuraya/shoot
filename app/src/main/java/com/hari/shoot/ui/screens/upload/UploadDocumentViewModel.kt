@@ -18,33 +18,56 @@ import java.time.format.DateTimeFormatter
 class UploadDocumentViewModel @Inject constructor(
     private val documentRepository: DocumentRepository
 ) : ViewModel() {
+
     private val _uploadState = MutableStateFlow<UploadState>(UploadState.Initial)
     val uploadState: StateFlow<UploadState> = _uploadState.asStateFlow()
 
+    companion object {
+        private val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
+    }
+
     fun uploadDocument(uri: Uri?, name: String, title: String, author: String, description: String) {
+        _uploadState.value = UploadState.Initial // Reset state at the start of the operation
+
+        if (uri == null) {
+            _uploadState.value = UploadState.Error("No file selected")
+            return
+        }
         if (name.isBlank()) {
-            _uploadState.value = UploadState.Error("Please enter a document name")
+            _uploadState.value = UploadState.Error("Document name cannot be empty")
+            return
+        }
+        if (title.isBlank()) {
+            _uploadState.value = UploadState.Error("Document title cannot be empty")
+            return
+        }
+        if (author.isBlank()) {
+            _uploadState.value = UploadState.Error("Author name cannot be empty")
+            return
+        }
+        if (description.isBlank()) {
+            _uploadState.value = UploadState.Error("Description cannot be empty")
             return
         }
 
-        uri?.let {
-            val document = Document(
-                id = System.currentTimeMillis(),
-                name = name,
-                date = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE),
-                uri = it.toString(),
-                title = title,
-                author = author,
-                description = description
-            )
-            viewModelScope.launch {
-                _uploadState.value = UploadState.Loading
-                try {
-                    documentRepository.saveDocument(document)
-                    _uploadState.value = UploadState.Success
-                } catch (e: Exception) {
-                    _uploadState.value = UploadState.Error(e.message ?: "Upload failed")
-                }
+        val document = Document(
+            id = System.currentTimeMillis(),
+            name = name,
+            date = LocalDateTime.now().format(dateFormatter),
+            uri = uri.toString(),
+            title = title,
+            author = author,
+            description = description
+        )
+
+        viewModelScope.launch {
+            _uploadState.value = UploadState.Loading
+            try {
+                documentRepository.saveDocument(document)
+                _uploadState.value = UploadState.Success
+            } catch (e: Exception) {
+                _uploadState.value = UploadState.Error(e.message ?: "Upload failed")
+                e.printStackTrace() // Log the exception
             }
         }
     }
@@ -55,4 +78,4 @@ sealed class UploadState {
     object Loading : UploadState()
     object Success : UploadState()
     data class Error(val message: String) : UploadState()
-} 
+}
